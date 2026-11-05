@@ -27,9 +27,19 @@ question ──► planner ──► query tree
   endpoint) receives the branch result plus the declared routes and emits one
   constrained JSON decision — `complete | add_child | prune | fail` + a route
   id. See [docs/jev.md](docs/jev.md).
-- **Concise prompts.** All four prompts (planner / JEV / SQL / answer) live in
-  [`jevrag/prompts.py`](jevrag/prompts.py) — a few hundred characters each,
-  no mode-specific variants. Structure is enforced in code, not prose.
+- **Ontology is the semantic backbone.** Record alignment, a grounded domain
+  model (concepts / hierarchy / relations / field links) and TriG export with
+  axioms strictly separated from evidence power the pipeline: the ontology
+  materializes the RDF graph that the GeoSPARQL tool queries. See
+  [docs/ontology.md](docs/ontology.md).
+- **GeoSPARQL retrieval.** Branches can query the materialized graph through a
+  JSON query spec (never raw SPARQL) under a GEOF allowlist — in-process
+  rdflib + shapely, or a Jena GeoSPARQL Fuseki endpoint. Spatial functions
+  stay disabled until the geometry CRS is verified.
+- **Concise prompts.** All six prompts (planner / JEV / SQL / geosparql /
+  ontology / answer) live in [`jevrag/prompts.py`](jevrag/prompts.py) — a few
+  hundred characters each, no mode-specific variants. Structure is enforced in
+  code, not prose.
 - **Validated mutations.** Only `QueryTree.apply` writes tree state; it
   rejects unknown routes, unknown actions and out-of-budget nodes.
 - **Evidence survives pruning.** Observations are immutable once recorded.
@@ -91,12 +101,14 @@ cd frontend && npm install && npm run build   # served at /
 
 ```
 jevrag/
-  prompts.py     all prompts (planner, JEV, SQL, answer)
+  prompts.py     all prompts (planner, JEV, SQL, geosparql, ontology, answer)
+  ontology.py    domain model + evidence grounding + TriG export
+  geosparql.py   manifest, RDF materialization, spec -> SPARQL, engines
   jev.py         JEV decision contract + client
   tree.py        query tree model; single write gate (QueryTree.apply)
   planner.py     question -> validated tree (with one repair retry)
   retrieval.py   BM25 source index (+ optional cross-encoder rerank)
-  tools.py       sql / search / none; read-only SQLite + haversine()
+  tools.py       sql / search / geosparql / none; read-only SQLite + haversine()
   evidence.py    evidence tree + answer synthesis
   orchestrator.py the run loop
   dataset.py     CSV/GeoJSON -> sqlite + profiles + index

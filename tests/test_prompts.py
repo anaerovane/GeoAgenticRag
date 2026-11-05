@@ -13,6 +13,8 @@ BUDGETS = {
     "PLANNER": 1200,
     "JEV": 1000,
     "SQL": 700,
+    "GEOSPARQL": 900,
+    "ONTOLOGY": 2800,
     "ANSWER": 700,
 }
 
@@ -35,4 +37,5 @@ def test_no_mode_variants():
 def test_placeholders_declared():
     assert "{schema}" in prompts.PLANNER and "{question}" in prompts.PLANNER
     assert "{schema}" in prompts.SQL and "{task}" in prompts.SQL
+    assert "{profile}" in prompts.ONTOLOGY and "{tree_paths}" in prompts.ONTOLOGY
     assert "{question}" in prompts.ANSWER and "{evidence}" in prompts.ANSWER

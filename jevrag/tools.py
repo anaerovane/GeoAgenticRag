@@ -55,6 +55,7 @@ class Dataset:
     tables: list[dict[str, Any]]
     index: SourceIndex
     db_path: Path
+    ontology_manifest: Path | None = None
     _conn: sqlite3.Connection | None = None
 
     @property
@@ -83,8 +84,10 @@ def load_dataset(dataset_id: str, spec: dict[str, Any]) -> Dataset:
         raise ToolError(f"source index missing: {index_path}")
     tables = json.loads(db_path.with_suffix(".tables.json").read_text(encoding="utf-8")) \
         if db_path.with_suffix(".tables.json").exists() else []
+    ontology = Path(spec["ontology"]) if spec.get("ontology") else None
     return Dataset(id=dataset_id, tables=tables,
-                   index=SourceIndex.load(index_path), db_path=db_path)
+                   index=SourceIndex.load(index_path), db_path=db_path,
+                   ontology_manifest=ontology)
 
 
 # --------------------------------------------------------------------------
@@ -147,6 +150,27 @@ def run_search(task: str, ctx: ToolContext) -> BranchResult:
                         evidence=evidence)
 
 
+def run_geosparql(task: str, ctx: ToolContext) -> BranchResult:
+    from . import geosparql as gq
+    if ctx.dataset.ontology_manifest is None:
+        raise ToolError("dataset has no ontology manifest (run `jevrag ontology`)")
+    manifest = gq.load_manifest(ctx.dataset.ontology_manifest)
+    outcome = gq.run(task, ctx.llm, manifest)
+    status = {"completed": "success", "no_match": "empty"}.get(
+        outcome.get("status"), "error")
+    rows = outcome.get("data", {}).get("rows", [])
+    evidence = [{
+        "source": "geosparql",
+        "text": outcome.get("conclusion") or outcome.get("summary", ""),
+        "payload": {"sparql": outcome.get("data", {}).get("sparql"),
+                    "graph_iri": outcome.get("data", {}).get("graph_iri"),
+                    "row_count": outcome.get("data", {}).get("row_count")},
+    }] if rows else []
+    return BranchResult(status=status, summary=outcome.get("summary", ""),
+                        rows=rows, evidence=evidence,
+                        error=(outcome.get("evidence_gaps") or [None])[0])
+
+
 def run_none(task: str, ctx: ToolContext) -> BranchResult:
     return BranchResult(status="success",
                         summary=f"reasoning step completed: {task[:160]}",
@@ -156,6 +180,7 @@ def run_none(task: str, ctx: ToolContext) -> BranchResult:
 TOOLS: dict[str, Callable[[str, ToolContext], BranchResult]] = {
     "sql": run_sql,
     "search": run_search,
+    "geosparql": run_geosparql,
     "none": run_none,
 }
 

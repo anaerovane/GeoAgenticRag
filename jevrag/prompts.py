@@ -1,11 +1,13 @@
 """All language-model prompts for GeoAgenticRag, kept deliberately short.
 
-Four prompts total:
+Six prompts total:
 
-- PLANNER — question -> query-tree JSON
-- JEV     — branch result -> tree decision JSON  (the centerpiece)
-- SQL     — sub-task -> read-only SELECT JSON
-- ANSWER  — evidence -> final answer
+- PLANNER  — question -> query-tree JSON
+- JEV      — branch result -> tree decision JSON  (the centerpiece)
+- SQL      — sub-task -> read-only SELECT JSON
+- GEOSPARQL — task -> GeoSPARQL query-spec JSON (never raw SPARQL)
+- ONTOLOGY — dataset profile -> source mapping + domain ontology JSON
+- ANSWER   — evidence -> final answer
 
 Each is a single template; there are no mode-specific variants and no
 accumulated rule fragments. Structural guarantees (schema validity, route
@@ -20,7 +22,7 @@ Return JSON only:
   "root": {{
     "id": "n1",
     "query": "<sub-task phrasing>",
-    "tool": "sql" | "search" | "none",
+    "tool": "sql" | "search" | "geosparql" | "none",
     "children": [
       {{"id": "...", "query": "...", "tool": "...", "when": "always" | "<route-id>"}}
     ],
@@ -35,7 +37,8 @@ Rules
 - Route ids are unique per node; every non-always "when" must be a declared
   route id of the same node.
 - tool: "sql" = table/CSV lookup or spatial SQL, "search" = keyword lookup in
-  the source index, "none" = pure reasoning over known facts.
+  the source index, "geosparql" = query the materialized RDF graph, "none" =
+  pure reasoning over known facts.
 - Use only tables and columns from the schema below. Never invent columns.
 
 Schema
@@ -98,4 +101,83 @@ Question: {question}
 
 Evidence
 {evidence}
+"""
+
+
+GEOSPARQL = """\
+You are the GeoSPARQL planner of a geographic Tree-RAG. Turn the task into a
+query spec over ONE verified RDF graph. Never write SPARQL.
+
+Return JSON only:
+{
+  "operation": "select" | "ask" | "within" | "intersects" | "distance" | "unsupported",
+  "select_predicates": ["<term from the predicate schema>", ...],
+  "filters": [{"predicate": "...", "value": "..."}],
+  "reference_filters": [{"predicate": "...", "value": "..."}],
+  "radius_metres": 0,
+  "exclude_reference": true,
+  "reason": "<why, when unsupported>"
+}
+
+Rules
+- Predicates must come from the predicate schema; values must be exact.
+- within/intersects/distance need verified geometry_crs and a reference in
+  reference_filters; distance tasks set radius_metres and exclude_reference.
+- No CRS, no predicate, or task inexpressible -> "unsupported" + reason.
+"""
+
+ONTOLOGY = """\
+You are the ontology architect of a geographic Tree-RAG. From the dataset
+profile below, produce the record alignment and the domain ontology. Axioms
+are PROPOSALS grounded in observed evidence, never instance facts.
+
+Return JSON only:
+{{
+  "record_kind": "spatial_feature" | "concept_vocabulary" | "records" | "unknown",
+  "class_alignment": "geo:Feature" | "skos:Concept" | "none",
+  "field_mappings": [{{"column": "...", "role": "label" | "latitude" |
+    "longitude" | "category" | "identifier" | "other", "term": "<role term>",
+    "basis": "...", "requires": ["crs_confirmation", ...]}}],
+  "category_binding": "observed_column" | "vocabulary_only" | "unavailable",
+  "category_column": "<column or null>",
+  "limitations": ["..."],
+  "domain_ontology": {{
+    "coverage": "partial_proposed_domain_model",
+    "concepts": [{{"id": "c1", "label": "...", "definition": "...",
+      "kind": "source_record" | "domain_category" | "geometry" | "coverage",
+      "alignment": "none" | "geo:Feature" | "geo:Geometry" | "skos:Concept",
+      "status": "proposed" | "observed_label",
+      "evidence": {{"basis": "...", "columns": ["..."],
+                   "values": [{{"column": "...", "value": "..."}}]}}}}],
+    "hierarchy": [{{"child": "cN", "parent": "cN" | "geo:Feature" | ...,
+                   "status": "proposed", "evidence": {{...}}}}],
+    "relations": [{{"id": "r1", "label": "...", "definition": "...",
+      "domain": "...", "range": "...", "property_kind": "object" | "datatype",
+      "standard_term": "geo:hasGeometry" | "geo:sfWithin" | ... | "none",
+      "status": "proposed", "requires": [...], "evidence": {{...}}}}],
+    "field_links": [{{"column": "...", "concept_id": "cN", "relation_id": "rN"}}],
+    "description_bindings": [{{"tree_path": "root", "concept_ids": ["cN"],
+      "relation_ids": ["rN"], "columns": ["..."]}}]
+  }}
+}}
+
+Rules
+- Map EVERY column exactly once. Role terms: label -> rdfs:label or
+  skos:prefLabel; latitude -> wgs84:lat; longitude -> wgs84:long; category ->
+  rdf:type; identifier -> dcterms:identifier; other -> none.
+- Use local ids c1../r1.. only. No row individuals, no owl:sameAs.
+- Only a domain_category grounded in an observed category value may be
+  observed_label; group such leaves under a proposed abstract parent.
+- geo:* relations require crs_confirmation + geometry_materialization
+  (+ spatial_evaluation); wgs84:* require crs_confirmation. Prerequisites are
+  not proof a geometry exists.
+- Evidence cites exact observed values (whole cells only) and real tree paths
+  (root, root.0, ...). Keep coverage=partial_proposed_domain_model and state
+  limitations (e.g. CRS unverified).
+
+Profile
+{profile}
+
+Tree paths
+{tree_paths}
 """
