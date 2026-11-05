@@ -24,7 +24,7 @@ Input (`build_payload` in `jevrag/jev.py`):
     "summary": "2 rows from SQL",
     "error": "",
     "row_count": 2,
-    "evidence_ids": ["e1", "e2"]
+    "evidence": [{"source": "sql", "text": "name=Cedar Park, district=West End"}]
   }
 }
 ```

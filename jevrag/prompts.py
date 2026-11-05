@@ -58,16 +58,15 @@ Return JSON only:
 
 Rules
 - route_id must come from the node's declared routes; never invent one.
-- Pick the route that matches the result status (success / empty / error),
-  preferring the most specific remaining branch.
-- complete: the result is usable; children marked "always" and children
-  waiting on route_id become runnable.
-- add_child: same as complete, plus exactly one concrete follow-up task
-  (follow_up is required) when the evidence clearly demands another step.
-- prune: the result makes the remaining conditional branches pointless;
-  "always" children still run.
-- fail: the result is unusable and no route applies; the run must stop.
-- Judge only this result. Do not redesign the plan.
+- Pick the route matching the result status (success / empty / error).
+- complete: result is usable; "always" children and children waiting on
+  route_id become runnable.
+- add_child: complete, plus one concrete follow_up (required) when the
+  evidence clearly demands another step.
+- prune: remaining conditional branches are pointless; "always" children
+  still run.
+- fail: result unusable and no route applies; the run must stop.
+- Judge only this result; do not redesign the plan.
 """
 
 SQL = """\

@@ -41,6 +41,7 @@ class Settings:
     max_depth: int = 5
     max_evidence: int = 24
     retrieval_k: int = 8
+    max_workers: int = 4      # concurrent branch executions (like local)
 
     # Service.
     host: str = "127.0.0.1"
@@ -65,6 +66,7 @@ class Settings:
         s.answer_model = os.getenv("JEVRAG_ANSWER_MODEL", s.answer_model) or s.planner_model
         s.rerank_url = os.getenv("JEVRAG_RERANK_URL", s.rerank_url)
         s.timeout_seconds = float(os.getenv("JEVRAG_TIMEOUT", s.timeout_seconds))
+        s.max_workers = int(os.getenv("JEVRAG_MAX_WORKERS", s.max_workers))
         s.host = os.getenv("JEVRAG_HOST", s.host)
         s.port = int(os.getenv("JEVRAG_PORT", s.port))
         s.artifacts_dir = Path(os.getenv("JEVRAG_ARTIFACTS", s.artifacts_dir))

@@ -64,7 +64,12 @@ def build_payload(node: Node, result: BranchResult, question: str) -> dict[str, 
             "summary": result.summary[:2000],
             "error": result.error[:400],
             "row_count": len(result.rows),
-            "evidence_ids": [e.get("id") for e in result.evidence[:12]],
+            # Evidence ids are assigned at attach time (after the decision),
+            # so JEV sees the observations themselves, not ids.
+            "evidence": [
+                {"source": e.get("source", "tool"), "text": str(e.get("text", ""))[:160]}
+                for e in result.evidence[:8]
+            ],
         },
     }
 

@@ -252,9 +252,14 @@ class QueryTree:
             self._index[child.id] = child
 
         # Activate always + selected-route children; prune the rest.
+        # "prune" is stricter: every conditional child is dropped, even one
+        # waiting on the selected route (the route is still recorded).
         for child in node.children:
-            if child.status is Status.PENDING and child.when not in ("always", route_id):
-                child.status = Status.PRUNED
+            if child.status is not Status.PENDING or child.when == "always":
+                continue
+            if action != "prune" and child.when == route_id:
+                continue
+            child.status = Status.PRUNED
 
         node.decision = dict(decision, applied=True)
         node.status = Status.DONE

@@ -83,6 +83,7 @@ def build_orchestrator(settings: Settings, dataset: Dataset) -> Orchestrator:
         answer_model=make_llm(settings, "answer"),
         dataset=dataset,
         max_evidence=settings.max_evidence,
+        max_workers=settings.max_workers,
     )
 
 

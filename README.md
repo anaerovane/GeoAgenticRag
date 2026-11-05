@@ -35,6 +35,9 @@ question ──► planner ──► query tree
 - **Evidence survives pruning.** Observations are immutable once recorded.
 - **No silent fallback.** A failed branch fails the run (`fail` → error
   propagates). Read-only SQL is enforced by a SQLite authorizer.
+- **Parallel branches.** Independent branches run concurrently on a thread
+  pool (`JEVRAG_MAX_WORKERS`, default 4); tree mutations and events are
+  serialized through the single write gate.
 - **Offline mode.** `JEVRAG_MOCK=1` runs the whole pipeline with a
   deterministic stand-in — no GPU, no network.
 
@@ -110,6 +113,7 @@ jevrag/
 | `JEVRAG_JEV_URL` / `_MODEL` / `_KEY` | `:8100/v1` / `jev` / `local` | JEV endpoint |
 | `JEVRAG_ANSWER_URL` / `_MODEL` | planner's | answer LLM |
 | `JEVRAG_RERANK_URL` | — | optional rerank endpoint |
+| `JEVRAG_MAX_WORKERS` | `4` | concurrent branch executions |
 | `JEVRAG_DATASETS` | `.runtime/data/datasets.json` | dataset registry |
 | `JEVRAG_ARTIFACTS` | `.runtime/artifacts` | per-query artifacts |
 

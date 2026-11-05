@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: #020617;
+  background-image:
+    radial-gradient(1200px 500px at 15% -10%, rgba(56, 189, 248, 0.07), transparent 60%),
+    radial-gradient(900px 420px at 90% 110%, rgba(16, 185, 129, 0.06), transparent 60%);
+}
+
+/* Thin, quiet scrollbars for the dense dark panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+select option {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Pulse used for the live status dot (slightly softer than Tailwind's). */
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.live-pulse {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
